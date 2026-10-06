@@ -1,5 +1,5 @@
 import type { Group, Person } from "@/domain/types";
-import { Brand } from "./Brand";
+import { Brand } from "@/components/Brand";
 
 type Props = {
   groups: Group[];
