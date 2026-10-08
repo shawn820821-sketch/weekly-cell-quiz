@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { getParticipantArchive } from "@/server/participantRepository";
+export async function GET(r:Request){try{const id=new URL(r.url).searchParams.get("personId");if(!id)return NextResponse.json({error:"personId required"},{status:400});return NextResponse.json({items:await getParticipantArchive(id)});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"보관함 조회 실패"},{status:500});}}

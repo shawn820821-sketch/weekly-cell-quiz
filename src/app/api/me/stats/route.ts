@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { getParticipantStats } from "@/server/participantRepository";
+export async function GET(r:Request){try{const id=new URL(r.url).searchParams.get("personId");if(!id)return NextResponse.json({error:"personId required"},{status:400});return NextResponse.json(await getParticipantStats(id));}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"기록 조회 실패"},{status:500});}}

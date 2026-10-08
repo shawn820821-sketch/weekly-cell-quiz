@@ -1,0 +1,9 @@
+export function MyStatsScreen({ data, onBack }:{ data:any; onBack:()=>void }){
+  return <>
+    <div className="topbar"><button className="back" onClick={onBack}>←</button><strong>내 기록</strong><span /></div>
+    <section className="recordHero"><div className="eyebrow">MY RECORD</div><h1>말씀과 함께한 기록</h1><div className="recordNumbers"><div><strong>{data?.officialWeeklyCount ?? 0}</strong><span>공식 참여</span></div><div><strong>{data?.perfectCount ?? 0}</strong><span>100점</span></div></div></section>
+    <section className="section"><div className="sectionTitle"><h2>월별 기록</h2><span>공식 기록만</span></div><div className="stackList">{(data?.monthlyHistory??[]).length ? data.monthlyHistory.map((m:any)=><article className="recordRow" key={m.periodId}><div><strong>{m.periodName}</strong><small>{m.groupName??"소속 셀 미지정"} · {m.participationCount}회 참여</small></div><div className="recordScore"><strong>{m.totalScore}점</strong><small>{m.rank ? `${m.rank}위` : "–"}</small></div></article>) : <div className="emptyState">아직 월간 기록이 없어요.</div>}</div></section>
+    <section className="section"><div className="sectionTitle"><h2>최근 주간 기록</h2><span>최근 12회</span></div><div className="stackList">{(data?.recent??[]).map((r:any)=><article className="recordRow" key={r.quizId}><div><strong>{r.title}</strong><small>{r.groupName??""}</small></div><div className="recordScore"><strong>{r.score}점</strong><small>{r.correct}/{r.total}</small></div></article>)}</div></section>
+    {(data?.specialPasses??[]).length>0 && <section className="section"><div className="sectionTitle"><h2>Special PASS</h2></div><div className="stackList">{data.specialPasses.map((p:any)=><article className="recordRow specialRecord" key={p.quizId}><div><strong>{p.title}</strong><small>{new Date(p.passedAt).toLocaleDateString("ko-KR")}</small></div><div className="recordScore"><strong>PASS</strong><small>{p.score}점</small></div></article>)}</div></section>}
+  </>;
+}

@@ -1,0 +1,9 @@
+import type { Person, QuizResult, RankingPayload } from "@/domain/types";
+export function ResultScreen({ person, result, weeklyRanking, monthlyRanking, reviewAvailable=true, reviewMessage, onReview, onHome }: { person: Person; result: QuizResult; weeklyRanking?: RankingPayload | null; monthlyRanking?: RankingPayload | null; reviewAvailable?:boolean; reviewMessage?:string|null; onReview: () => void; onHome: () => void }) {
+ const monthlyLeader = monthlyRanking?.ranking?.find(r=>r.rank===1);
+ return <><section className="resultHero"><div className="eyebrow gold">이번 기록</div><h1>수고했어요,<br />{person.name}님</h1><div className="score">{result.score}<span>점</span></div><div>{result.correct}/{result.total} 정답</div><p className="resultCopy">이번 주도 말씀을 다시 돌아보는 시간을 내주셨네요.<br />오늘의 말씀이 한 주를 이어가길 바라요.</p></section>
+ <section className="section">{reviewAvailable?<button className="btn btnPrimary full" onClick={onReview}>정답과 설명 보기 →</button>:<div className="card"><strong>정답은 아직 공개 전이에요.</strong><p className="subtle">{reviewMessage??"공개 조건이 되면 다시 확인할 수 있어요."}</p></div>}</section>
+ {(monthlyRanking?.me || weeklyRanking?.me) && <section className="section card stats"><div className="stat"><strong>{monthlyRanking?.me?.score!=null ? `${monthlyRanking.me.score}점` : "–"}</strong><span>이번 달 누적 {monthlyRanking?.me?.rank ? `· ${monthlyRanking.me.rank}위` : ""}</span></div><div className="stat"><strong>{weeklyRanking?.me?.rank ? `${weeklyRanking.me.rank}위` : "–"}</strong><span>이번 주</span></div>{monthlyLeader && <div className="stat"><strong>{monthlyLeader.name}</strong><span>이번 달 현재 1위 · {monthlyLeader.score}점</span></div>}</section>}
+ {result.verse&&<section className="section card"><div className="eyebrow">한 주를 함께할 말씀</div><p className="verseQuote">“{result.verse.text}”</p><p className="source">{result.verse.reference}</p></section>}
+ <section className="section"><button className="btn btnSecondary full" onClick={onHome}>홈으로</button></section></>;
+}

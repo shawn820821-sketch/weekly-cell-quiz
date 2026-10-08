@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server"; import { requireAdmin } from "@/server/operatorAuth"; import { createMonthlyPeriod,listMonthlyPeriods } from "@/server/seasonSpecialRepository";
+export async function GET(){try{await requireAdmin();return NextResponse.json({periods:await listMonthlyPeriods()});}catch(e){const m=e instanceof Error?e.message:"오류";return NextResponse.json({error:m},{status:m==="ADMIN_REQUIRED"?403:500});}}
+export async function POST(r:Request){try{await requireAdmin();const b=await r.json();return NextResponse.json({period:await createMonthlyPeriod({seasonId:b.seasonId,name:b.name,startsOn:b.startsOn,endsOn:b.endsOn})},{status:201});}catch(e){const m=e instanceof Error?e.message:"월간 기간 생성 실패";return NextResponse.json({error:m},{status:400});}}

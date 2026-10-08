@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server"; import { requireAdmin } from "@/server/operatorAuth"; import { createSpecialQuiz,listSpecialQuizzes } from "@/server/seasonSpecialRepository";
+export async function GET(){try{await requireAdmin();return NextResponse.json({specials:await listSpecialQuizzes()});}catch(e){const m=e instanceof Error?e.message:"오류";return NextResponse.json({error:m},{status:m==="ADMIN_REQUIRED"?403:500});}}
+export async function POST(r:Request){try{const a=await requireAdmin();const b=await r.json();return NextResponse.json({quiz:await createSpecialQuiz(b,a.personId)},{status:201});}catch(e){const m=e instanceof Error?e.message:"Special 생성 실패";return NextResponse.json({error:m},{status:m==="ADMIN_REQUIRED"?403:400});}}

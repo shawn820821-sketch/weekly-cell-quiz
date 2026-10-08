@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { requireAdmin } from "@/server/operatorAuth"; import { settleMonthlyPeriod } from "@/server/seasonSpecialRepository";
+export async function POST(r:Request){try{await requireAdmin();const b=await r.json();return NextResponse.json(await settleMonthlyPeriod(b.periodId));}catch(e){const m=e instanceof Error?e.message:"결산 실패";return NextResponse.json({error:m},{status:m==="ADMIN_REQUIRED"?403:400});}}
