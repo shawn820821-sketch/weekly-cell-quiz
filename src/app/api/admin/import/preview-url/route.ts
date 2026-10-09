@@ -23,11 +23,11 @@ async function safeUrl(raw:string){
 }
 export async function POST(request:Request){
  try{
-  await requireAdmin();const body=await request.json() as {url?:string;mode?:string;replaceImportId?:string;monthKey?:string};if(!body.url)return NextResponse.json({error:"Excel 파일 주소를 입력해주세요."},{status:400});
+  await requireAdmin();const body=await request.json() as {url?:string;mode?:string;replaceImportId?:string};if(!body.url)return NextResponse.json({error:"Excel 파일 주소를 입력해주세요."},{status:400});
   const u=await safeUrl(body.url);const response=await fetch(u,{redirect:"follow",headers:{"User-Agent":"WeeklyCellQuiz/1.1"}});if(!response.ok)throw new Error(`파일을 가져오지 못했습니다. (${response.status})`);
   const len=Number(response.headers.get("content-length")||0);if(len>MAX_BYTES)throw new Error("파일이 너무 큽니다. 8MB 이하 Excel 파일만 지원합니다.");
   const buf=Buffer.from(await response.arrayBuffer());if(buf.length>MAX_BYTES)throw new Error("파일이 너무 큽니다. 8MB 이하 Excel 파일만 지원합니다.");
-  const parsed=parseMonthlyWorkbook(buf,body.monthKey?.trim()||undefined);let replacementDiff:null|{oldCount:number;newCount:number;added:string[];removed:string[]}=null;
+  const parsed=parseMonthlyWorkbook(buf);let replacementDiff:null|{oldCount:number;newCount:number;added:string[];removed:string[]}=null;
   if(body.mode==="REPLACE"&&body.replaceImportId){const old=await supabaseRest<Array<{prompt:string}>>(`questions?import_id=eq.${body.replaceImportId}&select=prompt`);const oldSet=new Set(old.map(x=>x.prompt));const next=parsed.weeks.flatMap(w=>w.questions.map(q=>q.prompt));const nextSet=new Set(next);replacementDiff={oldCount:old.length,newCount:next.length,added:next.filter(x=>!oldSet.has(x)).slice(0,10),removed:old.map(x=>x.prompt).filter(x=>!nextSet.has(x)).slice(0,10)};}
   const pathName=decodeURIComponent(u.pathname.split("/").pop()||"remote-quiz.xlsx");const fileName=/\.xlsx$/i.test(pathName)?pathName:"remote-quiz.xlsx";
   return NextResponse.json({fileName,...parsed,replacementDiff});
