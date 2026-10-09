@@ -11,7 +11,34 @@ const str=(v:unknown)=>String(v??"").trim();
 function typeOf(v:unknown):"MCQ"|"OX"|null{const s=str(v).toUpperCase();if(["MCQ","객관식","4지선다"].includes(s))return "MCQ";if(["OX","O/X","오엑스"].includes(s))return "OX";return null;}
 function difficultyOf(v:unknown){const s=str(v).toUpperCase();return (["EASY","MEDIUM","HARD"].includes(s)?s:"MEDIUM") as "EASY"|"MEDIUM"|"HARD";}
 
-export function parseMonthlyWorkbook(buffer:Buffer){
+function datePartsFromRange(range:string, monthKey?:string){
+  const full=[...range.matchAll(/(20\d{2})[.\/-](\d{1,2})[.\/-](\d{1,2})/g)].map(m=>({y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}));
+  if(full.length)return full;
+  const short=[...range.matchAll(/(?<!\d)(\d{1,2})[.\/-](\d{1,2})(?!\d)/g)].map(m=>({m:Number(m[1]),d:Number(m[2])}));
+  if(!short.length||!monthKey)return [];
+  const mm=monthKey.match(/^(20\d{2})-(0[1-9]|1[0-2])$/);if(!mm)return [];
+  let y=Number(mm[1]);let prev=Number(mm[2]);
+  return short.map((x,i)=>{if(i>0&&x.m<prev)y+=1;prev=x.m;return {y,m:x.m,d:x.d};});
+}
+function nextQuizWindow(range:string, monthKey?:string){
+  const parts=datePartsFromRange(range,monthKey);if(!parts.length)return null;
+  const first=parts[0];const sourceStart=new Date(Date.UTC(first.y,first.m-1,first.d));
+  const open=new Date(sourceStart);open.setUTCDate(open.getUTCDate()+7);
+  const day=open.getUTCDay();const toMonday=(day+6)%7;open.setUTCDate(open.getUTCDate()-toMonday);
+  const close=new Date(open);close.setUTCDate(close.getUTCDate()+5);
+  const pad=(n:number)=>String(n).padStart(2,"0");
+  const iso=(d:Date,h:number,min:number)=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(h)}:${pad(min)}:00+09:00`;
+  const weekNo=Math.floor((open.getUTCDate()-1)/7)+1;
+  return {openAt:iso(open,0,0),closeAt:iso(close,23,59),label:`${open.getUTCMonth()+1}월 ${weekNo}주차`};
+}
+function targetTitle(original:string,sheetName:string,label:string){
+  const base=original||`${sheetName} 주간 셀 퀴즈`;
+  if(/\d{1,2}월\s*\d+주차/.test(base))return base.replace(/\d{1,2}월\s*\d+주차/,label);
+  if(/\d+주차/.test(base))return base.replace(/\d+주차/,label);
+  return `${label} · ${base}`;
+}
+
+export function parseMonthlyWorkbook(buffer:Buffer, monthKey?:string){
   const hash=createHash("sha256").update(buffer).digest("hex");
   const wb=XLSX.read(buffer,{type:"buffer",cellDates:false});
   const weeks:ImportWeek[]=[];
@@ -19,7 +46,9 @@ export function parseMonthlyWorkbook(buffer:Buffer){
     const ws=wb.Sheets[sheetName];
     const rows=XLSX.utils.sheet_to_json<unknown[]>(ws,{header:1,defval:"",raw:false});
     const meta=(key:string)=>{const r=rows.find(r=>str(r[0])===key);return r?str(r[1]):"";};
-    const week:ImportWeek={sheetName,title:meta("퀴즈제목")||`${sheetName} 주간 셀 퀴즈`,lifeDateRange:meta("생명의삶 기간"),bibleRange:meta("성경범위"),openAt:meta("공개일시"),closeAt:meta("마감일시"),memo:meta("출제메모"),questions:[],errors:[]};
+    const lifeDateRange=meta("생명의삶 기간");const derived=nextQuizWindow(lifeDateRange,monthKey);
+    const week:ImportWeek={sheetName,title:derived?targetTitle(meta("퀴즈제목"),sheetName,derived.label):(meta("퀴즈제목")||`${sheetName} 주간 셀 퀴즈`),lifeDateRange,bibleRange:meta("성경범위"),openAt:derived?.openAt||meta("공개일시"),closeAt:derived?.closeAt||meta("마감일시"),memo:meta("출제메모"),questions:[],errors:[]};
+    if(lifeDateRange&&!derived)week.errors.push("생명의삶 기간에서 날짜를 읽지 못해 공개일시를 자동 계산하지 못했습니다. (권장: YYYY-MM-DD ~ YYYY-MM-DD)");
     const headerIndex=rows.findIndex(r=>str(r[0])==="번호"&&str(r[1])==="문제유형");
     if(headerIndex<0){week.errors.push("문제 헤더 행을 찾지 못했습니다.");weeks.push(week);continue;}
     for(let i=headerIndex+1;i<rows.length;i++){
