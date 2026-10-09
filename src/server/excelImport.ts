@@ -15,7 +15,7 @@ export function parseMonthlyWorkbook(buffer:Buffer){
   const hash=createHash("sha256").update(buffer).digest("hex");
   const wb=XLSX.read(buffer,{type:"buffer",cellDates:false});
   const weeks:ImportWeek[]=[];
-  for(const sheetName of wb.SheetNames.filter(n=>/^\d+주차$/.test(n))){
+  for(const sheetName of wb.SheetNames.filter(n=>/^(?:\d{1,2}월\s*)?\d+주차$/.test(n))){
     const ws=wb.Sheets[sheetName];
     const rows=XLSX.utils.sheet_to_json<unknown[]>(ws,{header:1,defval:"",raw:false});
     const meta=(key:string)=>{const r=rows.find(r=>str(r[0])===key);return r?str(r[1]):"";};
