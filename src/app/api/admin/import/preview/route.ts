@@ -7,10 +7,10 @@ export const runtime="nodejs";
 export async function POST(request:Request){
  try{
   await requireAdmin();
-  const form=await request.formData(); const file=form.get("file"); const mode=String(form.get("mode")??"NEW"); const replaceImportId=String(form.get("replaceImportId")??"");
+  const form=await request.formData(); const file=form.get("file"); const mode=String(form.get("mode")??"NEW"); const replaceImportId=String(form.get("replaceImportId")??""); const monthKey=String(form.get("monthKey")??"").trim();
   if(!(file instanceof File))return NextResponse.json({error:"Excel 파일을 선택해주세요."},{status:400});
   if(!/\.xlsx$/i.test(file.name))return NextResponse.json({error:".xlsx 파일만 지원합니다."},{status:400});
-  const parsed=parseMonthlyWorkbook(Buffer.from(await file.arrayBuffer()));
+  const parsed=parseMonthlyWorkbook(Buffer.from(await file.arrayBuffer()),monthKey||undefined);
   let replacementDiff:null|{oldCount:number;newCount:number;added:string[];removed:string[]}=null;
   if(mode==="REPLACE"&&replaceImportId){
     const old=await supabaseRest<Array<{prompt:string}>>(`questions?import_id=eq.${replaceImportId}&select=prompt`);
