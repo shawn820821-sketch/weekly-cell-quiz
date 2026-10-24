@@ -3,7 +3,17 @@ import { requireAdmin } from "@/server/operatorAuth";
 import { supabaseRest } from "@/lib/supabase/rest";
 
 export async function GET() {
-  try { await requireAdmin(); return NextResponse.json({ quizzes: await supabaseRest("quizzes?order=created_at.desc&select=*") }); }
+  try {
+    await requireAdmin();
+    const rows=await supabaseRest<any[]>("quizzes?order=created_at.desc&select=*");
+    const now=Date.now();
+    const quizzes=rows.map(q=>{
+      if(q.quiz_type!=="WEEKLY"||q.status==="DRAFT"||!q.open_at||!q.close_at)return q;
+      const open=new Date(q.open_at).getTime(),close=new Date(q.close_at).getTime();
+      return {...q,status:now<open?"SCHEDULED":now<=close?"OPEN":"CLOSED"};
+    });
+    return NextResponse.json({quizzes});
+  }
   catch (error) { const m = error instanceof Error ? error.message : "오류"; return NextResponse.json({ error:m }, { status:m === "ADMIN_REQUIRED" ? 403 : 500 }); }
 }
 
