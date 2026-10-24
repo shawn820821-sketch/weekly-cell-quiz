@@ -11,7 +11,8 @@ export async function GET() {
       supabaseRest<Array<{ id:string;title:string;status:string;open_at:string|null;close_at:string|null }>>("quizzes?quiz_type=eq.WEEKLY&order=open_at.desc&limit=6&select=id,title,status,open_at,close_at"),
       supabaseRest<Array<{ quiz_id:string;person_id:string;mode:string }>>("submissions?mode=eq.OFFICIAL&select=quiz_id,person_id,mode"),
     ]);
-    const current = quizzes.find((q) => q.status === "OPEN") ?? quizzes[0] ?? null;
+    const now = Date.now();
+    const current = quizzes.find((q) => q.open_at && q.close_at && new Date(q.open_at).getTime() <= now && now <= new Date(q.close_at).getTime()) ?? null;
     const currentSubmissions = current ? submissions.filter((s) => s.quiz_id === current.id).length : 0;
     return NextResponse.json({ activePeople: people.length, activeGroups: groups.length, currentQuiz: current, participation: { submitted: currentSubmissions, eligible: people.length }, recentQuizzes: quizzes });
   } catch (error) {
