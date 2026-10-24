@@ -179,3 +179,16 @@ fs.writeFileSync("src/server/resultRepository.ts","import { supabaseRest } from 
  fs.writeFileSync(path,s);
 }
 console.log('v1.4.7 analytics and navigation installed');
+
+
+// Final compatibility for the older ZIP hook's test flag scope.
+{
+ const path='src/state/useQuizApp.ts';let s=fs.readFileSync(path,'utf8');
+ s=s.replace(/!person\|\|!sessionId\|\|screen!=="quiz"\|\|!quiz\.id\|\|!questions\.length\|\|testMode/g,
+   '!person||!sessionId||screen!=="quiz"||!quiz.id||!questions.length||window.location.search.includes("test=1")');
+ s=s.replace('quiz.id,questions,answers,questionIndex,playKind,testMode]', 'quiz.id,questions,answers,questionIndex,playKind]');
+ s=s.replace(/!person\|\|!weeklyQuiz\.id\|\|USE_MOCK\|\|testMode/g,
+   '!person||!weeklyQuiz.id||USE_MOCK||window.location.search.includes("test=1")');
+ s=s.replace('},[person,weeklyQuiz.id,testMode]);','},[person,weeklyQuiz.id]);');
+ fs.writeFileSync(path,s);
+}
