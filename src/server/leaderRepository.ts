@@ -17,7 +17,8 @@ export async function getLeaderDashboard(){
     supabaseRest<MembershipRow[]>(`group_memberships?group_id=eq.${groupId}&starts_on=lte.${today}&or=(ends_on.is.null,ends_on.gte.${today})&select=person_id,group_id`),
     supabaseRest<PersonRow[]>("people?active=eq.true&select=id,display_name,active,ranking_eligible"),
   ]);
-  const current=quizRows.find(q=>q.status==="OPEN")??quizRows[0]??null;
+  const now=Date.now();
+  const current=quizRows.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??null;
   const memberIds=memberships.map(m=>m.person_id);
   const nameMap=new Map(people.map(p=>[p.id,p]));
   if(!current||!memberIds.length){return {groupId,currentQuiz:current,members:[],submitted:0,eligible:memberIds.length,average:null,monthlyLeader:null};}
