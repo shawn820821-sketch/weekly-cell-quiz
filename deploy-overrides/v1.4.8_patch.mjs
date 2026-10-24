@@ -25,3 +25,18 @@ import fs from "node:fs";
   fs.writeFileSync(path,s);
 }
 console.log("v1.4.8 practice resume patch applied");
+
+
+// Display 0 points instead of an empty dash before the first monthly score.
+{
+ const path="src/components/HomeScreen.tsx";
+ let s=fs.readFileSync(path,"utf8");
+ const target='<span>이번 달 누적</span>';
+ const pos=s.indexOf(target);
+ if(pos>=0){
+  const from=Math.max(0,pos-250),portion=s.slice(from,pos),last=portion.lastIndexOf('"–"');
+  if(last>=0)s=s.slice(0,from+last)+'"0점"'+s.slice(from+last+3);
+ }
+ fs.writeFileSync(path,s);
+}
+console.log("v1.4.8 monthly tile fallback patched");
