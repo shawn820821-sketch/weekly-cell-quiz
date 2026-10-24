@@ -1,4 +1,5 @@
 import { supabaseRest } from "@/lib/supabase/rest";
+import { settlementMonthForQuiz, monthCycleBounds, isSettlementMonthClosed } from "@/lib/monthlyCycle";
 
 type SubmissionRow = { person_id:string; group_id_snapshot:string|null; score:number; quiz_id:string; submitted_at:string };
 type PersonRow = { id:string; display_name:string; ranking_eligible:boolean };
@@ -43,36 +44,39 @@ export async function getWeeklyResult(quizId:string,personId:string){
  return {groupId,ranking,me:ranking.find(r=>r.personId===personId)??null,final,label:final?"최종 결과":"진행 중 · 토요일 마감 후 최종 확정"};
 }
 export async function getMonthlyResult(quizId:string,personId:string){
- const found=await supabaseRest<Array<{id:string;content_month_key:string|null;monthly_period_id:string|null;open_at:string|null}>>(
-  `quizzes?id=eq.${quizId}&limit=1&select=id,content_month_key,monthly_period_id,open_at`);
+ const found=await supabaseRest<Array<{id:string;monthly_period_id:string|null;close_at:string|null}>>(
+  `quizzes?id=eq.${quizId}&limit=1&select=id,monthly_period_id,close_at`);
  const quiz=found[0];if(!quiz)return {periodId:null,ranking:[],me:null,final:false};
- // Use the published quiz's month, even before the monthly settlement period is created.
- const month=quiz.content_month_key??(quiz.open_at?new Date(quiz.open_at).toLocaleDateString("en-CA",{timeZone:"Asia/Seoul"}).slice(0,7):null);
+ // ONLY the settlement Sunday in Seoul determines which month owns the quiz.
+ const month=settlementMonthForQuiz(quiz.close_at);
  if(!month)return {periodId:null,ranking:[],me:null,final:false};
- const kstDate=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Seoul"});
- const [membership,people,monthQuizzes]=await Promise.all([
+ const kstDate=new Date(Date.now()+9*60*60*1000).toISOString().slice(0,10);
+ const {endsOn}=monthCycleBounds(month);
+ const [membership,periods,monthQuizzes]=await Promise.all([
   supabaseRest<Array<{group_id:string}>>(`group_memberships?person_id=eq.${personId}&starts_on=lte.${kstDate}&or=(ends_on.is.null,ends_on.gte.${kstDate})&order=starts_on.desc&limit=1&select=group_id`),
-  supabaseRest<PersonRow[]>("people?ranking_eligible=eq.true&select=id,display_name,ranking_eligible"),
-  supabaseRest<Array<{id:string}>>(`quizzes?quiz_type=eq.WEEKLY&content_month_key=eq.${month}&select=id`)
+  supabaseRest<PeriodRow[]>(`monthly_periods?ends_on=eq.${endsOn}&limit=1&select=id,starts_on,ends_on,closed,name`),
+  supabaseRest<Array<{id:string;close_at:string|null;count_in_monthly:boolean}>>(
+   "quizzes?quiz_type=eq.WEEKLY&count_in_monthly=eq.true&close_at=not.is.null&order=close_at.desc&limit=120&select=id,close_at,count_in_monthly")
  ]);
+ const period=periods[0]??null;
+ const periodId=period?.id??quiz.monthly_period_id;
  const groupId=membership[0]?.group_id??null;
- if(!groupId)return {periodId:quiz.monthly_period_id,groupId:null,ranking:[],me:null,final:false};
+ const final=isSettlementMonthClosed(month);
+ if(!groupId)return {periodId,groupId:null,ranking:[],me:null,final,label:`${month} 월간 기록`};
  const allowed=await eligiblePeopleForGroup(groupId,kstDate);
- const ids=monthQuizzes.map(q=>q.id);
+ const ids=monthQuizzes.filter(q=>settlementMonthForQuiz(q.close_at)===month).map(q=>q.id);
  const monthSubs=ids.length?await supabaseRest<Array<SubmissionRow & {id:string}>>(
   `submissions?quiz_id=in.(${ids.join(",")})&mode=eq.OFFICIAL&group_id_snapshot=eq.${groupId}&order=submitted_at.asc&select=id,person_id,group_id_snapshot,score,quiz_id,submitted_at`):[];
- // Only the earliest official submission per person per quiz counts.
- const scores=new Map<string,number>(), seen=new Set<string>();
+ // An accidental retry never produces extra cumulative score.
+ const scores=new Map<string,number>(),seen=new Set<string>();
  for(const sub of monthSubs){
   const key=sub.quiz_id+":"+sub.person_id;
   if(seen.has(key))continue;
   seen.add(key);scores.set(sub.person_id,(scores.get(sub.person_id)??0)+sub.score);
  }
  const ranking=rankWithMissing(allowed.map(p=>({...p,score:scores.get(p.personId)??null})));
- const period=quiz.monthly_period_id?await supabaseRest<PeriodRow[]>(`monthly_periods?id=eq.${quiz.monthly_period_id}&limit=1&select=id,starts_on,ends_on,closed,name`):[];
- return {periodId:quiz.monthly_period_id,groupId,
-  // Participants see only the current leader, not the complete monthly ranking.
+ return {periodId,groupId,
   ranking:ranking.filter(r=>r.rank===1),
-  me:(()=>{const mine=ranking.find(r=>r.personId===personId);return mine?{...mine,rank:null}:null;})(),final:Boolean(period[0]?.closed),
-  label:period[0]?.closed?`${period[0]?.name??month} 결과`:`${month} 현재 순위`};
+  me:(()=>{const mine=ranking.find(r=>r.personId===personId);return mine?{...mine,rank:null}:null;})(),
+  final,label:final?`${month} 최종 결과`:`${month} 현재 순위`};
 }
