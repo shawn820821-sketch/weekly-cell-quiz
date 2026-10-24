@@ -1,0 +1,9 @@
+import fs from "node:fs";
+// v1.4.10: precise next-opening notice and inclusive, tied first-place display.
+const path="src/components/HomeScreen.tsx";
+let s=fs.readFileSync(path,"utf8");
+const changes=[["<div className=\"weeklyBody\">{!quiz.id&&nextQuiz?.openAt&&<p className=\"subtle\">{nextQuiz.title} · {new Date(nextQuiz.openAt).toLocaleString(\"ko-KR\",{timeZone:\"Asia/Seoul\",month:\"long\",day:\"numeric\",weekday:\"long\",hour:\"2-digit\",minute:\"2-digit\"})} 공개</p>}<button className=\"btn btnPrimary full\"","<div className=\"weeklyBody\">{!quiz.id&&<p className=\"subtle\">{nextQuiz?.openAt?`지금은 퀴즈가 마감되었어요. ${new Date(nextQuiz.openAt).toLocaleString(\"ko-KR\",{timeZone:\"Asia/Seoul\",month:\"long\",day:\"numeric\",weekday:\"long\",hour:\"2-digit\",minute:\"2-digit\",hour12:false})}부터 다시 참여해 주세요.`:\"현재 진행 중인 퀴즈가 없어요. 다음 공개 일정을 확인해 주세요.\"}</p>}<button className=\"btn btnPrimary full\""],["<strong>{leader?leader.name:\"–\"}</strong><span>이번 달 현재 1위</span>","<strong style={{fontSize:\"clamp(15px,3.8vw,21px)\",lineHeight:1.4,overflowWrap:\"anywhere\"}}>{monthlyRanking?.ranking?.filter(r=>r.rank===1).map(r=>r.name).join(\" · \")||\"–\"}</strong><span>{leader?`${(monthlyRanking?.ranking?.filter(r=>r.rank===1).length??0)>1?\"공동 1위\":\"현재 1위\"} · ${leader.score}점`:\"이번 달 현재 1위\"}</span>"],["leader?`현재 1위 ${leader.name}`:\"월간 기록\"","leader?((monthlyRanking?.ranking?.filter(r=>r.rank===1).length??0)>1?`공동 1위 ${monthlyRanking?.ranking?.filter(r=>r.rank===1).length}명`:`현재 1위 ${leader.name}`):\"월간 기록\""]];
+for(const [from,to] of changes){if(!s.includes(from))throw new Error("v1.4.10 UI match missing: "+from.slice(0,65));s=s.replace(from,to);}
+if(!s.includes("다시 참여해 주세요")||!s.includes("공동 1위"))throw new Error("v1.4.10 post-check failed");
+fs.writeFileSync(path,s);
+console.log("v1.4.10 next quiz notice and all joint first-place leaders enabled");
