@@ -12,7 +12,7 @@ export async function GET() {
       supabaseRest<Array<{ quiz_id:string;person_id:string;mode:string }>>("submissions?mode=eq.OFFICIAL&select=quiz_id,person_id,mode"),
     ]);
     const now = Date.now();
-    const current = quizzes.find((q) => q.open_at && q.close_at && new Date(q.open_at).getTime() <= now && now <= new Date(q.close_at).getTime()) ?? null;
+    const current = quizzes.find((q) => q.open_at && q.close_at && new Date(q.open_at).getTime() <= now && now <= new Date(q.close_at).getTime()) ?? quizzes.find((q) => q.close_at && new Date(q.close_at).getTime() < now) ?? null;
     const currentSubmissions = current ? submissions.filter((s) => s.quiz_id === current.id).length : 0;
     return NextResponse.json({ activePeople: people.length, activeGroups: groups.length, currentQuiz: current, participation: { submitted: currentSubmissions, eligible: people.length }, recentQuizzes: quizzes });
   } catch (error) {
