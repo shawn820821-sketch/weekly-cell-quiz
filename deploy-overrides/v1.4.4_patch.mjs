@@ -99,35 +99,3 @@ patchOptional('src/components/HomeScreen.tsx',[
   if(!s.includes(before)) throw new Error('v1.4.6 patch target missing [admin-quizzes-status]');
   fs.writeFileSync(path,s.replace(before,after));
 }
-
-// Draft question deletion (requested operator feature)
-{
-  const path='src/app/api/admin/questions/route.ts';
-  let s=fs.readFileSync(path,'utf8');
-  if(!s.includes('export async function DELETE(request: Request)')){
-    s += `
-
-export async function DELETE(request: Request) {
-  try {
-    await requireAdmin();
-    const body = await request.json() as { questionId?: string; quizId?: string };
-    if (!body.questionId || !body.quizId) return NextResponse.json({ error: "삭제할 문제 정보가 필요합니다." }, { status: 400 });
-    const quizzes = await supabaseRest<Array<{id:string;status:string;selection_mode:string;random_question_count:number|null}>>(`quizzes?id=eq.${body.quizId}&select=id,status,selection_mode,random_question_count`);
-    const quiz = quizzes[0];
-    if (!quiz) return NextResponse.json({ error: "퀴즈를 찾지 못했습니다." }, { status: 404 });
-    if (quiz.status !== "DRAFT") return NextResponse.json({ error: "DRAFT 상태의 퀴즈 문제만 삭제할 수 있습니다." }, { status: 409 });
-    await supabaseRest(`questions?id=eq.${body.questionId}&quiz_id=eq.${body.quizId}`, { method: "DELETE" });
-    const remaining = await supabaseRest<Array<{id:string}>>(`questions?quiz_id=eq.${body.quizId}&selected=eq.true&select=id`);
-    const selectedCount = remaining.length;
-    const nextRandom = quiz.selection_mode === "RANDOM" ? Math.min(Number(quiz.random_question_count ?? selectedCount), selectedCount) : null;
-    await supabaseRest(`quizzes?id=eq.${body.quizId}`, { method: "PATCH", body: JSON.stringify({published_question_count: quiz.selection_mode === "RANDOM" ? nextRandom : selectedCount,random_question_count: nextRandom}) });
-    return NextResponse.json({ ok: true, selectedCount });
-  } catch (error) {
-    const m = error instanceof Error ? error.message : "문제 삭제 실패";
-    return NextResponse.json({ error: m }, { status: m === "ADMIN_REQUIRED" ? 403 : 500 });
-  }
-}
-`;
-  }
-  fs.writeFileSync(path,s);
-}
