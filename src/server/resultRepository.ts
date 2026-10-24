@@ -22,18 +22,24 @@ async function eligiblePeopleForGroup(groupId:string,onDate:string){
  return members.filter(m=>names.has(m.person_id)).map(m=>({personId:m.person_id,name:names.get(m.person_id)!}));
 }
 export async function getWeeklyResult(quizId:string,personId:string){
- const [quiz,own]=await Promise.all([
-  supabaseRest<QuizRow[]>(`quizzes?id=eq.${quizId}&limit=1&select=id,monthly_period_id,open_at,close_at,status`),
-  supabaseRest<SubmissionRow[]>(`submissions?quiz_id=eq.${quizId}&person_id=eq.${personId}&mode=eq.OFFICIAL&limit=1&select=person_id,group_id_snapshot,score,quiz_id,submitted_at`)
+ const quizzes=await supabaseRest<QuizRow[]>(`quizzes?id=eq.${quizId}&limit=1&select=id,monthly_period_id,open_at,close_at,status`);
+ const quiz=quizzes[0];
+ if(!quiz)throw new Error("Quiz not found.");
+ const onDate=(quiz.open_at??new Date().toISOString()).slice(0,10);
+ const [own,memberships]=await Promise.all([
+   supabaseRest<SubmissionRow[]>(`submissions?quiz_id=eq.${quizId}&person_id=eq.${personId}&mode=eq.OFFICIAL&order=submitted_at.asc&limit=1&select=person_id,group_id_snapshot,score,quiz_id,submitted_at`),
+   supabaseRest<MembershipRow[]>(`group_memberships?person_id=eq.${personId}&starts_on=lte.${onDate}&or=(ends_on.is.null,ends_on.gte.${onDate})&order=starts_on.desc&limit=1&select=person_id,group_id,starts_on,ends_on`)
  ]);
- if(!own[0]) throw new Error("Official result not found."); const groupId=own[0].group_id_snapshot; if(!groupId) return {groupId:null,ranking:[],me:null,final:false};
- const onDate=(quiz[0]?.open_at??own[0].submitted_at).slice(0,10);
+ const groupId=own[0]?.group_id_snapshot??memberships[0]?.group_id??null;
+ if(!groupId)return {groupId:null,ranking:[],me:null,final:Boolean(quiz.close_at&&Date.now()>new Date(quiz.close_at).getTime())};
  const [subs,eligible]=await Promise.all([
-  supabaseRest<SubmissionRow[]>(`submissions?quiz_id=eq.${quizId}&mode=eq.OFFICIAL&group_id_snapshot=eq.${groupId}&select=person_id,group_id_snapshot,score,quiz_id,submitted_at`),
+  supabaseRest<SubmissionRow[]>(`submissions?quiz_id=eq.${quizId}&mode=eq.OFFICIAL&group_id_snapshot=eq.${groupId}&order=submitted_at.asc&select=person_id,group_id_snapshot,score,quiz_id,submitted_at`),
   eligiblePeopleForGroup(groupId,onDate)
  ]);
- const scores=new Map(subs.map(s=>[s.person_id,s.score])); const ranking=rankWithMissing(eligible.map(p=>({...p,score:scores.has(p.personId)?scores.get(p.personId)!:null})));
- const final=Boolean(quiz[0]?.close_at&&Date.now()>new Date(quiz[0].close_at!).getTime());
+ const scores=new Map<string,number>();
+ for(const sub of subs)if(!scores.has(sub.person_id))scores.set(sub.person_id,sub.score);
+ const ranking=rankWithMissing(eligible.map(p=>({...p,score:scores.get(p.personId)??null})));
+ const final=Boolean(quiz.close_at&&Date.now()>new Date(quiz.close_at).getTime());
  return {groupId,ranking,me:ranking.find(r=>r.personId===personId)??null,final,label:final?"최종 결과":"진행 중 · 토요일 마감 후 최종 확정"};
 }
 export async function getMonthlyResult(quizId:string,personId:string){
@@ -64,7 +70,9 @@ export async function getMonthlyResult(quizId:string,personId:string){
  }
  const ranking=rankWithMissing(allowed.map(p=>({...p,score:scores.get(p.personId)??null})));
  const period=quiz.monthly_period_id?await supabaseRest<PeriodRow[]>(`monthly_periods?id=eq.${quiz.monthly_period_id}&limit=1&select=id,starts_on,ends_on,closed,name`):[];
- return {periodId:quiz.monthly_period_id,groupId,ranking,
+ return {periodId:quiz.monthly_period_id,groupId,
+  // Participants see only the current leader, not the complete monthly ranking.
+  ranking:ranking.filter(r=>r.rank===1),
   me:ranking.find(r=>r.personId===personId)??null,final:Boolean(period[0]?.closed),
   label:period[0]?.closed?`${period[0]?.name??month} 결과`:`${month} 현재 순위`};
 }
