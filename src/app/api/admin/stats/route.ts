@@ -4,9 +4,9 @@ import { supabaseRest } from "@/lib/supabase/rest";
 export async function GET(){
  try{
   await requireAdmin();
-  const now=new Date();const nowIso=encodeURIComponent(now.toISOString());
-  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string;open_at:string|null;close_at:string|null}>>(`quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&open_at=lte.${nowIso}&close_at=gte.${nowIso}&order=open_at.desc&limit=1&select=id,title,status,open_at,close_at`);
-  const quiz=quizzes[0]??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});
+  const now=Date.now();
+  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string;open_at:string|null;close_at:string|null}>>("quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&order=open_at.desc&limit=10&select=id,title,status,open_at,close_at");
+  const quiz=quizzes.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??quizzes.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});
   const subs=await supabaseRest<Array<{id:string;score:number}>>(`submissions?quiz_id=eq.${quiz.id}&mode=eq.OFFICIAL&select=id,score`);
   const ids=subs.map(s=>s.id);
   const questions=await supabaseRest<Array<{id:string;prompt:string;sort_order:number}>>(`questions?quiz_id=eq.${quiz.id}&selected=eq.true&order=sort_order.asc&select=id,prompt,sort_order`);
