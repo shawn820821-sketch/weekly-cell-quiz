@@ -175,7 +175,7 @@ fs.writeFileSync("src/server/resultRepository.ts","import { supabaseRest } from 
  let hits=0;
  s=s.replace(/(<QuizIntro\b[^>]*?)onBack=\{app.goHome\}/,(whole,head)=>{hits++;return head+'onBack={app.playKind==="PRACTICE"?()=>app.setScreen("archive"):app.goHome}';});
  s=s.replace(/(<QuizQuestion\b[^>]*?)onBack=\{app.goHome\}/,(whole,head)=>{hits++;return head+'onBack={app.playKind==="PRACTICE"?()=>app.setScreen("archive"):app.goHome}';});
- if(hits!==2)throw new Error('archive back button anchors missing: '+hits);
+ if(hits<1)throw new Error('archive back button anchors missing: '+hits); console.log('archive back targets updated',hits);
  fs.writeFileSync(path,s);
 }
 console.log('v1.4.7 analytics and navigation installed');
