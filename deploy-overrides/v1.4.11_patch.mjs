@@ -4,8 +4,8 @@ for (const path of ["src/server/resultRepository.ts","src/app/api/admin/monthly-
   let s=fs.readFileSync(path,"utf8");
   const old="quizzes?quiz_type=eq.WEEKLY&content_month_key=eq."+ "${month}" + "&select=id";
   const next="quizzes?quiz_type=eq.WEEKLY&content_month_key=eq."+ "${month}" + "&count_in_monthly=eq.true&select=id";
-  if(!s.includes(old))throw new Error("MONTHLY_FILTER_MISSING: "+path);
-  fs.writeFileSync(path,s.replace(old,next));
+  if(!s.includes(old)&&!s.includes("count_in_monthly=eq.true"))throw new Error("MONTHLY_FILTER_MISSING: "+path);
+  fs.writeFileSync(path,s.includes(old)?s.replace(old,next):s);
 }
 {
   const path="src/components/HomeScreen.tsx";
