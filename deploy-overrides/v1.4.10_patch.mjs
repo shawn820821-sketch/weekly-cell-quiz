@@ -7,3 +7,6 @@ for(const [from,to] of changes){if(!s.includes(from))throw new Error("v1.4.10 UI
 if(!s.includes("다시 참여해 주세요")||!s.includes("공동 1위"))throw new Error("v1.4.10 post-check failed");
 fs.writeFileSync(path,s);
 console.log("v1.4.10 next quiz notice and all joint first-place leaders enabled");
+
+// Apply follow-on changes after v1.4.10 completes.
+await import("./v1.4.11_patch.mjs");
