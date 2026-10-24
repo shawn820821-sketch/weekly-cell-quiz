@@ -125,3 +125,19 @@ console.log('v1.4.6 rollover patch complete');
  if(!s.includes('const currentWeekIdRef=useRef("")'))throw new Error('currentWeekIdRef insertion failed');
  fs.writeFileSync(path,s);
 }
+
+
+// v1.4.7 draft resume
+{
+ const path='src/state/useQuizApp.ts';let s=fs.readFileSync(path,'utf8');
+ const anchor="setQuestionIndex(0);setScreen(\"quiz\");\n  }catch(e){setError(e instanceof Error?e.message:\"퀴즈를 시작하지 못했습니다.\");}finally{setBusy(false);}\n }";
+ if(!s.includes(anchor)) throw new Error('draft resume start anchor missing');
+ s=s.replace(anchor,"const draftKey=\"weekly-draft-v2:\"+person.id+\":\"+target.id+\":\"+mode;\n   try{\n     const savedRaw=window.localStorage.getItem(draftKey);\n     if(data.resumed&&savedRaw){\n       const saved=JSON.parse(savedRaw) as {sessionId:string;questionIds:string[];answers:Array<number|null>;questionIndex:number};\n       if(saved.sessionId===data.session.id && JSON.stringify(saved.questionIds)===JSON.stringify(data.questions.map((q:PlayableQuestion)=>q.id)) && saved.answers.length===data.questions.length){\n         setAnswers(saved.answers);\n         setQuestionIndex(Math.max(0,Math.min(data.questions.length-1,saved.questionIndex||0)));\n       }else{setQuestionIndex(0);}\n     }else{setQuestionIndex(0);}\n   }catch{setQuestionIndex(0);}\n   setScreen(\"quiz\");\n  }catch(e){setError(e instanceof Error?e.message:\"퀴즈를 시작하지 못했습니다.\");}finally{setBusy(false);}\n }");
+ const returnAnchor=' return {hydrated,busy,error,setError,screen,setScreen,';
+ if(!s.includes(returnAnchor))throw new Error('draft resume hook anchor missing');
+ s=s.replace(returnAnchor," useEffect(()=>{if(!person||!sessionId||screen!==\"quiz\"||!quiz.id||!questions.length||testMode)return;\n   try{window.localStorage.setItem(\"weekly-draft-v2:\"+person.id+\":\"+quiz.id+\":\"+(playKind===\"PRACTICE\"?\"PRACTICE\":\"OFFICIAL\"),JSON.stringify({sessionId,questionIds:questions.map(q=>q.id),answers,questionIndex}));}catch{}\n },[person,sessionId,screen,quiz.id,questions,answers,questionIndex,playKind,testMode]);\n "+returnAnchor);
+ const completed='setResult(data.result);if(playKind==="WEEKLY")';
+ if(!s.includes(completed))throw new Error('draft cleanup anchor missing');
+ s=s.replace(completed,'try{if(person)window.localStorage.removeItem("weekly-draft-v2:"+person.id+":"+quiz.id+":"+(playKind==="PRACTICE"?"PRACTICE":"OFFICIAL"));}catch{}'+completed);
+ fs.writeFileSync(path,s);console.log('v1.4.7 draft resume installed');
+}
