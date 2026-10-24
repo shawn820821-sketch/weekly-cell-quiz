@@ -46,7 +46,7 @@ fs.writeFileSync("src/components/MonthlyResultScreen.tsx","import type { Ranking
  if(s.includes("onStart:()=>void"))s=s.replace("onStart:()=>void","nextQuiz?:{title:string;openAt:string|null}|null;onStart:()=>void");
  if(s.includes("onStart,onReview"))s=s.replace("onStart,onReview","nextQuiz=null,onStart,onReview");
  const body='<div className="weeklyBody"><button className="btn btnPrimary full"';
- if(s.includes(body))s=s.replace(body,'<div className="weeklyBody">{!quizAvailable&&nextQuiz?.openAt&&<p className="subtle">{nextQuiz.title} · {new Date(nextQuiz.openAt).toLocaleString("ko-KR",{timeZone:"Asia/Seoul",month:"long",day:"numeric",weekday:"long",hour:"2-digit",minute:"2-digit"})} 공개</p>}<button className="btn btnPrimary full"');
+ if(s.includes(body))s=s.replace(body,'<div className="weeklyBody">{!quiz.id&&nextQuiz?.openAt&&<p className="subtle">{nextQuiz.title} · {new Date(nextQuiz.openAt).toLocaleString("ko-KR",{timeZone:"Asia/Seoul",month:"long",day:"numeric",weekday:"long",hour:"2-digit",minute:"2-digit"})} 공개</p>}<button className="btn btnPrimary full"');
  s=s.replace(':"이번 주 퀴즈 없음"',':"다음 퀴즈 공개 전"');
  const monthlyLabel='<span>이번 달 누적</span>', idx=s.indexOf(monthlyLabel);
  if(idx<0)throw new Error("MONTHLY_SUMMARY_LABEL_NOT_FOUND");
