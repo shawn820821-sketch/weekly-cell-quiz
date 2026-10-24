@@ -40,7 +40,8 @@ export async function getParticipantArchive(personId:string){
   const subMap=new Map<string,SubmissionRow>();
   for(const s of subs){ if(s.attempt_no===1 && !subMap.has(s.quiz_id)) subMap.set(s.quiz_id,s); }
   const periodMap=new Map(periods.map(p=>[p.id,p.name])); const groupMap=new Map(groups.map(g=>[g.id,g.name]));
-  return quizzes.filter(q=>q.quiz_type==="WEEKLY" || q.quiz_type==="SPECIAL").map(q=>{
+  const now=Date.now();
+  return quizzes.filter(q=>(q.quiz_type==="WEEKLY" || q.quiz_type==="SPECIAL") && Boolean(q.close_at) && new Date(q.close_at!).getTime()<now).map(q=>{
     const s=subMap.get(q.id);
     return {quizId:q.id,title:q.title,quizType:q.quiz_type,periodName:q.monthly_period_id?periodMap.get(q.monthly_period_id)??null:null,bibleRange:q.bible_range,lifeDateRange:q.life_date_range,openAt:q.open_at,closeAt:q.close_at,status:q.status,official:s?{score:s.score,correct:s.correct_count,total:s.question_count,submittedAt:s.submitted_at,groupName:s.group_id_snapshot?groupMap.get(s.group_id_snapshot)??null:null}:null};
   });
