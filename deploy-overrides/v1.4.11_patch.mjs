@@ -32,3 +32,6 @@ for (const path of ["src/server/resultRepository.ts","src/app/api/admin/monthly-
   fs.writeFileSync(path,s);
 }
 console.log("v1.4.11 monthly exclusion and closure dialog installed");
+
+// Apply new Sunday-only accounting after all prior stable patches.
+await import("./v1.4.12_patch.mjs");
