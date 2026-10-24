@@ -4,7 +4,8 @@ import { supabaseRest } from "@/lib/supabase/rest";
 export async function GET(){
  try{
   await requireAdmin();
-  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string}>>("quizzes?quiz_type=eq.WEEKLY&order=open_at.desc&limit=1&select=id,title,status");
+  const now=new Date();const nowIso=encodeURIComponent(now.toISOString());
+  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string;open_at:string|null;close_at:string|null}>>(`quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&open_at=lte.${nowIso}&close_at=gte.${nowIso}&order=open_at.desc&limit=1&select=id,title,status,open_at,close_at`);
   const quiz=quizzes[0]??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});
   const subs=await supabaseRest<Array<{id:string;score:number}>>(`submissions?quiz_id=eq.${quiz.id}&mode=eq.OFFICIAL&select=id,score`);
   const ids=subs.map(s=>s.id);
