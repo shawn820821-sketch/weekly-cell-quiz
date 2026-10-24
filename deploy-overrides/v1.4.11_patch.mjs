@@ -25,7 +25,7 @@ for (const path of ["src/server/resultRepository.ts","src/app/api/admin/monthly-
   const buttonEnd=s.indexOf('</button>',contentStart);
   if(contentStart<buttonOpen.length||buttonEnd<contentStart)throw new Error("CLOSED_BUTTON_CONTENT_NOT_FOUND");
   s=s.slice(0,contentStart)+'{quiz.id?(result?"결과 보기 →":"퀴즈 시작하기 →"):"마감됨 · 다음 공개 시간 확인 →"}'+s.slice(buttonEnd);
-  const i=s.lastIndexOf('</>}');
+  const i=s.lastIndexOf('</>');
   if(i<0)throw new Error("HOME_CLOSE_NOT_FOUND");
   s=s.slice(0,i)+"{closedNoticeOpen&&<div className=\"modalWrap\" role=\"dialog\" aria-modal=\"true\" aria-label=\"퀴즈 마감 및 다음 공개 안내\">\n <div className=\"modal\">\n <h3>이번 주 퀴즈가 마감되었어요</h3>\n <p className=\"subtle\" style={{fontSize:17,fontWeight:700,lineHeight:1.7,margin:\"14px 0 24px\"}}>\n {nextQuiz?.openAt?new Intl.DateTimeFormat(\"ko-KR\",{timeZone:\"Asia/Seoul\",month:\"long\",day:\"numeric\",weekday:\"long\",hour:\"2-digit\",minute:\"2-digit\",hourCycle:\"h23\"}).format(new Date(nextQuiz.openAt))+\"부터 다시 참여해 주세요.\":\"현재 참여할 수 있는 퀴즈가 없어요. 다음 공개 일정을 확인해 주세요.\"}\n </p>\n <button type=\"button\" className=\"btn btnPrimary full\" onClick={()=>setClosedNoticeOpen(false)}>확인</button>\n </div></div>}"+s.slice(i);
   if(!s.includes('role="dialog"'))throw new Error("DIALOG_INSERT_FAILED");
