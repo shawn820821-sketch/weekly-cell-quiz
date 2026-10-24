@@ -10,8 +10,11 @@ fs.writeFileSync("src/components/MonthlyResultScreen.tsx","import type { Ranking
  const anchor=' return {hydrated,busy,error,setError,screen,setScreen,';
  if(!s.includes(anchor))throw new Error("OVERVIEW_HOOK_ANCHOR_MISSING");
  s=s.replace(anchor," const [upcomingQuiz,setUpcomingQuiz]=useState<{id:string;title:string;openAt:string|null}|null>(null);\n useEffect(()=>{if(!person||USE_MOCK||window.location.search.includes(\"test=1\"))return;let active=true;async function refreshOverview(){try{const response=await fetch(\"/api/results/overview?personId=\"+encodeURIComponent(person.id)+\"&t=\"+Date.now(),{cache:\"no-store\"});if(!response.ok)return;const data=await response.json();if(!active)return;setWeeklyRanking(data.weekly??null);setMonthlyRanking(data.monthly??null);setUpcomingQuiz(data.nextQuiz??null);}catch{}}void refreshOverview();const focus=()=>void refreshOverview();const visible=()=>{if(document.visibilityState===\"visible\")void refreshOverview();};window.addEventListener(\"focus\",focus);document.addEventListener(\"visibilitychange\",visible);return()=>{active=false;window.removeEventListener(\"focus\",focus);document.removeEventListener(\"visibilitychange\",visible);};},[person?.id,weeklyQuiz.id,weeklyResult,screen]);\n"+anchor);
- s=s.replace('goHome,startSpecial,startArchivedPractice};','goHome,startSpecial,startArchivedPractice,upcomingQuiz};');
- if(!s.includes('startArchivedPractice,upcomingQuiz'))throw new Error("UPCOMING_PROP_MISSING");
+ const returnStart=s.lastIndexOf(' return {hydrated,busy,error,setError,screen,setScreen,');
+ const returnEnd=s.indexOf('};',returnStart);
+ if(returnStart<0||returnEnd<0)throw new Error("UPCOMING_RETURN_ANCHOR_MISSING");
+ s=s.slice(0,returnEnd)+',upcomingQuiz'+s.slice(returnEnd);
+ if(!s.includes('upcomingQuiz};'))throw new Error("UPCOMING_PROP_MISSING");
  s=s.replace('if(w.ok)setWeeklyRanking(await w.json());','if(w.ok)await w.json();');
  fs.writeFileSync(path,s);
 }
