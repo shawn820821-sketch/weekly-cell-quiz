@@ -108,3 +108,20 @@ stableEdit('src/app/api/quiz/start/route.ts',s=>{
  return requireChange(before,s,'prevent-current-practice');
 });
 console.log('v1.4.6 rollover patch complete');
+
+
+// v1.4.6 TS compatibility with the v1.4.3 client's different hook naming.
+{
+ const path='src/state/useQuizApp.ts';
+ let s=fs.readFileSync(path,'utf8');
+ s=s.replace('export function useQuizApp(){','export function useQuizApp(){const currentWeekIdRef=useRef("");');
+ s=s.replace(/let currentWeekId="";/g,'');
+ s=s.replace(/\bcurrentWeekId\b/g,'currentWeekIdRef.current');
+ s=s.replace('const data=await response.json();',
+   'const data=await response.json();currentWeekIdRef.current=data.currentQuiz?.id??"";');
+ s=s.replace(/!hydrated\|\|USE_MOCK\|\|testMode/g,
+   '!hydrated||USE_MOCK||window.location.search.includes("test=1")');
+ s=s.replace(/\[hydrated,testMode,weeklyQuiz\.id\]/g,'[hydrated,weeklyQuiz.id]');
+ if(!s.includes('const currentWeekIdRef=useRef("")'))throw new Error('currentWeekIdRef insertion failed');
+ fs.writeFileSync(path,s);
+}
