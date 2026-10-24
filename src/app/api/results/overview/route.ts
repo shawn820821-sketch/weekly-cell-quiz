@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseRest } from "@/lib/supabase/rest";
 import { getMonthlyResult, getWeeklyResult } from "@/server/resultRepository";
+import { settlementMonthForDate,settlementMonthForQuiz } from "@/lib/monthlyCycle";
 
 type Quiz={id:string;title:string;status:string;open_at:string|null;close_at:string|null;content_month_key:string|null};
 
@@ -10,11 +11,11 @@ export async function GET(request:Request){
   const personId=new URL(request.url).searchParams.get("personId");
   if(!personId)return NextResponse.json({error:"personId required"},{status:400});
   const now=Date.now();
-  const month=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit"}).format(new Date());
+  const month=settlementMonthForDate(new Date());
   const quizzes=await supabaseRest<Quiz[]>("quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&order=open_at.desc&limit=50&select=id,title,status,open_at,close_at,content_month_key");
   const lastClosed=quizzes.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;
-  const monthQuiz=quizzes.find(q=>q.content_month_key===month&&q.open_at&&new Date(q.open_at).getTime()<=now)
-    ??quizzes.find(q=>q.content_month_key===month)??null;
+  const monthQuiz=quizzes.find(q=>settlementMonthForQuiz(q.close_at)===month&&q.open_at&&new Date(q.open_at).getTime()<=now)
+    ??quizzes.find(q=>settlementMonthForQuiz(q.close_at)===month)??null;
   const next=quizzes.filter(q=>q.open_at&&new Date(q.open_at).getTime()>now)
     .sort((a,b)=>new Date(a.open_at!).getTime()-new Date(b.open_at!).getTime())[0]??null;
   const [weekly,monthly]=await Promise.all([
