@@ -53,17 +53,17 @@ patchOptional('src/server/appRepository.ts',[
 
 patchOptional('src/app/api/admin/dashboard/route.ts',[
 ['    const current = quizzes.find((q) => q.status === "OPEN") ?? quizzes[0] ?? null;',
- '    const now = Date.now();\n    const current = quizzes.find((q) => q.open_at && q.close_at && new Date(q.open_at).getTime() <= now && now <= new Date(q.close_at).getTime()) ?? null;','admin-dashboard-current']
+ '    const now = Date.now();\n    const current = quizzes.find((q) => q.open_at && q.close_at && new Date(q.open_at).getTime() <= now && now <= new Date(q.close_at).getTime()) ?? quizzes.find((q) => q.close_at && new Date(q.close_at).getTime() < now) ?? null;','admin-dashboard-current']
 ]);
 
 patchOptional('src/app/api/admin/stats/route.ts',[
 ['  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string}>>("quizzes?quiz_type=eq.WEEKLY&order=open_at.desc&limit=1&select=id,title,status");\n  const quiz=quizzes[0]??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});',
- '  const now=new Date();const nowIso=encodeURIComponent(now.toISOString());\n  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string;open_at:string|null;close_at:string|null}>>(`quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&open_at=lte.${nowIso}&close_at=gte.${nowIso}&order=open_at.desc&limit=1&select=id,title,status,open_at,close_at`);\n  const quiz=quizzes[0]??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});','admin-stats-current']
+ '  const now=Date.now();\n  const quizzes=await supabaseRest<Array<{id:string;title:string;status:string;open_at:string|null;close_at:string|null}>>("quizzes?quiz_type=eq.WEEKLY&status=neq.DRAFT&order=open_at.desc&limit=10&select=id,title,status,open_at,close_at");\n  const quiz=quizzes.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??quizzes.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;if(!quiz)return NextResponse.json({quiz:null,participation:0,average:null,questions:[]});','admin-stats-current']
 ]);
 
 patchOptional('src/server/leaderRepository.ts',[
 ['  const current=quizRows.find(q=>q.status==="OPEN")??quizRows[0]??null;',
- '  const now=Date.now();\n  const current=quizRows.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??null;','leader-current']
+ '  const now=Date.now();\n  const current=quizRows.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??quizRows.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;','leader-current']
 ]);
 
 patchOptional('src/server/participantRepository.ts',[
