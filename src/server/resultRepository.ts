@@ -73,6 +73,6 @@ export async function getMonthlyResult(quizId:string,personId:string){
  return {periodId:quiz.monthly_period_id,groupId,
   // Participants see only the current leader, not the complete monthly ranking.
   ranking:ranking.filter(r=>r.rank===1),
-  me:ranking.find(r=>r.personId===personId)??null,final:Boolean(period[0]?.closed),
+  me:(()=>{const mine=ranking.find(r=>r.personId===personId);return mine?{...mine,rank:null}:null;})(),final:Boolean(period[0]?.closed),
   label:period[0]?.closed?`${period[0]?.name??month} 결과`:`${month} 현재 순위`};
 }
