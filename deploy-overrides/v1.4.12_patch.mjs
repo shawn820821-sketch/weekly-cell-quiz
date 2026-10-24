@@ -30,3 +30,6 @@ for(const [closeAt,expectedMonth,expectedSunday] of cases){
 if(monthCycleBounds("2026-10").endsOn!=="2026-10-25"||monthCycleBounds("2026-11").startsOn!=="2026-10-26"||monthCycleBounds("2026-11").endsOn!=="2026-11-29")throw new Error("MONTHLY_BOUNDS_TEST_FAIL");
 if(settlementMonthForDate("2026-10-25T03:00:00Z")!=="2026-10"||settlementMonthForDate("2026-10-25T15:00:00Z")!=="2026-11")throw new Error("MONTH_ROLLOVER_TEST_FAIL");
 console.log("v1.4.12 Sunday-only settlement installed; 7 date boundaries verified");
+
+// Final display patch for joint monthly first place in result views.
+await import("./v1.4.13_patch.mjs");
