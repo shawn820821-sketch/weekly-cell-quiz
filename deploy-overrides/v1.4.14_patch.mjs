@@ -17,3 +17,6 @@ fs.writeFileSync("src/app/icon.svg","<svg xmlns=\"http://www.w3.org/2000/svg\" v
  fs.writeFileSync(path,s);
 }
 console.log("v1.4.14 social link metadata installed and live monthly ranking refresh every 60 seconds");
+
+// Ensure status labels always match real schedule windows.
+await import("./v1.4.15_patch.mjs");
