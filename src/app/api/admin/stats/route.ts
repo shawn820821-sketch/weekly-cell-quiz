@@ -13,8 +13,12 @@ export async function GET(request:Request){
   await requireAdmin();
   const requestedId=new URL(request.url).searchParams.get("quizId");
   const quizzes=await supabaseRest<Quiz[]>("quizzes?quiz_type=eq.WEEKLY&order=open_at.desc&limit=100&select=id,title,status,open_at,close_at");
-  const eligible=quizzes.filter(q=>q.status!=="DRAFT"&&Boolean(q.open_at));
   const now=Date.now();
+  const eligible=quizzes.filter(q=>q.status!=="DRAFT"&&Boolean(q.open_at)).map(q=>{
+   if(!q.open_at||!q.close_at)return q;
+   const open=new Date(q.open_at).getTime(),close=new Date(q.close_at).getTime();
+   return {...q,status:now<open?"SCHEDULED":now<close?"OPEN":"CLOSED"};
+  });
   const selected=requestedId?eligible.find(q=>q.id===requestedId)
     :eligible.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())
      ??eligible.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)
