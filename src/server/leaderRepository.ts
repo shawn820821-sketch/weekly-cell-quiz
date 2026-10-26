@@ -18,7 +18,12 @@ export async function getLeaderDashboard(){
     supabaseRest<PersonRow[]>("people?active=eq.true&select=id,display_name,active,ranking_eligible"),
   ]);
   const now=Date.now();
-  const current=quizRows.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<=new Date(q.close_at).getTime())??quizRows.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;
+  const normalizedQuizzes=quizRows.map(q=>{
+    if(!q.open_at||!q.close_at||q.status==="DRAFT")return q;
+    const start=new Date(q.open_at).getTime(),end=new Date(q.close_at).getTime();
+    return {...q,status:now<start?"SCHEDULED":now<end?"OPEN":"CLOSED"};
+  });
+  const current=normalizedQuizzes.find(q=>q.open_at&&q.close_at&&new Date(q.open_at).getTime()<=now&&now<new Date(q.close_at).getTime())??normalizedQuizzes.find(q=>q.close_at&&new Date(q.close_at).getTime()<now)??null;
   const memberIds=memberships.map(m=>m.person_id);
   const nameMap=new Map(people.map(p=>[p.id,p]));
   if(!current||!memberIds.length){return {groupId,currentQuiz:current,members:[],submitted:0,eligible:memberIds.length,average:null,monthlyLeader:null};}
