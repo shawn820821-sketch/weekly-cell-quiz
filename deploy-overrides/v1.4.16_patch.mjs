@@ -23,3 +23,6 @@ import fs from "node:fs";
  fs.appendFileSync(path,"\n.candidate{grid-template-columns:24px 38px minmax(0,1fr) auto;cursor:default}\n.candidateContent{min-width:0;overflow-wrap:anywhere}\n.candidateChoices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:6px;margin:10px 0 8px}\n.candidateChoice{display:flex;align-items:flex-start;gap:8px;border:1px solid #e1e3dd;border-radius:9px;background:#fbfbf7;padding:9px 10px;line-height:1.45;font-size:13px;color:#33443f}\n.candidateChoiceLabel{flex:0 0 19px;font-weight:900;color:#506377}\n.candidateAnswer{border-color:#8ba579;background:#eaf3e5}\n.candidateAnswer em{flex:0 0 auto;margin-left:auto;font-style:normal;font-size:11px;font-weight:800;color:#365c26}\n.candidateExplanation{margin-top:9px;font-size:12px;color:#536154}\n.candidateExplanation summary{cursor:pointer;font-weight:750}\n.candidateExplanation p{margin:7px 0 0;white-space:pre-wrap;line-height:1.55}\n.candidateDelete{align-self:start;white-space:nowrap}\n@media(max-width:620px){.candidate{grid-template-columns:22px 26px minmax(0,1fr)}.candidateDelete{grid-column:3;justify-self:end}}\n");
 }
 console.log("v1.4.16 answer choices, correct-answer labels and guarded quiz deletion ready");
+
+// Restore native Enter submit on operator login after all quiz-editor modifications.
+await import("./v1.4.17_patch.mjs");
