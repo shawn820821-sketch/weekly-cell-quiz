@@ -11,3 +11,6 @@ if(!s.includes('type="password" autoComplete="current-password"')||!s.includes('
  throw new Error("OPERATOR_ENTER_LOGIN_POSTCHECK_FAILED");
 fs.writeFileSync(path,s);
 console.log("v1.4.17 operator PIN Enter-to-login form restored");
+
+// Make answer candidate card selection comfortable on desktop and mobile.
+await import("./v1.4.18_patch.mjs");
