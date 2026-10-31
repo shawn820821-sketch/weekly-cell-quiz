@@ -63,3 +63,6 @@ if(fs.readFileSync(uiPath,"utf8").includes('className="adminPanel importRecommen
 if(!fs.readFileSync(uiPath,"utf8").includes('setRecommendedFile(file);setRecommendedPreview(vj)'))
  throw new Error("v1.4.21 v4 auto recognition missing");
 console.log("v1.4.21: DB constraint, POST result and unified Excel UI: 6 guards PASS");
+
+// v1.4.22: single confirmation for quiz deletion; do not ask to type title.
+await import("./v1.4.22_delete_confirm.mjs");
