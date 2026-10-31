@@ -30,8 +30,8 @@ declare
  patch jsonb;
  qr public.quizzes%rowtype;
  row_question public.questions%rowtype;
- quiz_id uuid;
- question_id uuid;
+ v_quiz_id uuid;
+ v_question_id uuid;
  selected_count integer;
  count_existing integer;
  count_plan integer;
@@ -65,15 +65,15 @@ begin
  then raise exception 'Missing or duplicate planned quiz IDs'; end if;
 
  for wk in select value from jsonb_array_elements(p_plan->'weeks') loop
-  quiz_id:=(wk->>'quizId')::uuid;
-  select * into strict qr from public.quizzes where id=quiz_id;
+  v_quiz_id:=(wk->>'quizId')::uuid;
+  select * into strict qr from public.quizzes where id=v_quiz_id;
   baseline:=wk->'baseline';
   if qr.status::text<>'SCHEDULED'
     or qr.open_at<=clock_timestamp()
     or qr.quiz_type::text<>'WEEKLY'
     or qr.selection_mode::text<>'FIXED'
     or qr.published_question_count<>10
-  then raise exception 'Quiz is no longer a safe scheduled fixed quiz: %',quiz_id; end if;
+  then raise exception 'Quiz is no longer a safe scheduled fixed quiz: %',v_quiz_id; end if;
   if qr.title is distinct from baseline->>'title'
     or qr.status::text is distinct from baseline->>'status'
     or qr.open_at is distinct from (baseline->>'open_at')::timestamptz
@@ -92,13 +92,13 @@ begin
   then raise exception 'Quiz now contains sessions/submissions: %',qr.title; end if;
 
   select count(*)::int,count(*) filter(where selected)::int into count_existing,selected_count
-   from public.questions where quiz_id=quiz_id;
+   from public.questions where quiz_id=v_quiz_id;
   count_plan:=jsonb_array_length(wk->'candidates');
   if count_existing<>count_plan or selected_count<>10
    then raise exception 'Question count or selected count changed: %',qr.title; end if;
 
   select array_agg(id::text order by id::text) into selected_ids
-    from public.questions where quiz_id=quiz_id and selected;
+    from public.questions where quiz_id=v_quiz_id and selected;
   select array_agg(x order by x) into expected_selected
     from jsonb_array_elements_text(wk->'unchangedSelectionIds') x;
   if selected_ids is distinct from expected_selected
@@ -106,14 +106,14 @@ begin
 
   -- Preserve full recovery snapshot, including IDs and selected flags.
   select jsonb_agg(to_jsonb(q) order by q.candidate_order,q.id)
-   into snapshot_questions from public.questions q where quiz_id=quiz_id;
+   into snapshot_questions from public.questions q where quiz_id=v_quiz_id;
   backup_payload:=backup_payload || jsonb_build_array(jsonb_build_object(
    'quiz',to_jsonb(qr),'questions',coalesce(snapshot_questions,'[]'::jsonb)
   ));
 
   for c in select value from jsonb_array_elements(wk->'candidates') loop
-   question_id:=(c->>'id')::uuid;
-   select * into strict row_question from public.questions where id=question_id and quiz_id=quiz_id for update;
+   v_question_id:=(c->>'id')::uuid;
+   select * into strict row_question from public.questions where id=v_question_id and quiz_id=v_quiz_id for update;
    baseline:=c->'baseline';
    original:=jsonb_build_object(
     'id',row_question.id,'selected',row_question.selected,
@@ -125,9 +125,9 @@ begin
     'note',row_question.note,'import_id',row_question.import_id
    );
    if original is distinct from baseline
-    then raise exception 'Candidate changed after preview: quiz % question %',quiz_id,question_id; end if;
+    then raise exception 'Candidate changed after preview: quiz % question %',v_quiz_id,v_question_id; end if;
    if row_question.candidate_order<>(c->>'no')::int
-    then raise exception 'Candidate identity mismatch: %',question_id; end if;
+    then raise exception 'Candidate identity mismatch: %',v_question_id; end if;
    patch:=c->'patch';
    if patch<>'{}'::jsonb then
     if (patch - array['prompt','choices','correct_index','explanation','hint','bible_range','difficulty','note'])<>'{}'::jsonb
@@ -141,7 +141,7 @@ begin
       bible_range=case when patch?'bible_range' then patch->>'bible_range' else bible_range end,
       difficulty=case when patch?'difficulty' then patch->>'difficulty' else difficulty end,
       note=case when patch?'note' then patch->>'note' else note end
-    where id=question_id and quiz_id=quiz_id;
+    where id=v_question_id and quiz_id=v_quiz_id;
     changed_count:=changed_count+1;
     changed_fields:=changed_fields+(select count(*) from jsonb_object_keys(patch));
    end if;
