@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { supabaseRest } from "@/lib/supabase/rest";
 
 const COLUMNS=["번호","문제유형","문제","보기1","보기2","보기3","보기4","정답","간단설명","힌트","성경범위","난이도","비고"] as const;
-type NewQuestion={no:number;question_type:"MCQ"|"OX";prompt:string;choices:string[];correct_index:number;explanation:string;hint:string|null;bible_range:string|null;difficulty:"EASY"|"MEDIUM"|"HARD";note:string|null};
+type NewQuestion={no:number;existingDbUuid:string|null;question_type:"MCQ"|"OX";prompt:string;choices:string[];correct_index:number;explanation:string;hint:string|null;bible_range:string|null;difficulty:"EASY"|"MEDIUM"|"HARD";note:string|null};
 type IncomingWeek={sheet:string;openAt:string;closeAt:string;questions:NewQuestion[];lifeDateRange:string;declaredTitle:string|null;declaredMonthKey:string|null;declaredWeekIndex:number|null};
 type QuizRow={id:string;title:string;status:string;quiz_type:string;open_at:string|null;close_at:string|null;selection_mode:string;random_question_count:number|null;published_question_count:number|null;import_id:string|null;monthly_period_id:string|null;content_month_key:string|null;content_week_index:number|null};
 type QuestionRow={id:string;quiz_id:string;candidate_order:number|null;sort_order:number;selected:boolean;question_type:string;prompt:string;choices:string[];correct_index:number;explanation:string|null;hint:string|null;bible_range:string|null;difficulty:string|null;note:string|null;import_id:string|null};
@@ -83,8 +83,11 @@ export function parsePreserveExcel(bytes:Buffer){
    required(choices.every(Boolean),"시트 "+name+" 문제 "+no+": 보기 누락");
    const difficulty=get(row,"난이도").toUpperCase();
    required(["EASY","MEDIUM","HARD"].includes(difficulty),"시트 "+name+" 문제 "+no+": 난이도 누락 또는 오류");
+   required(get(row,"간단설명"),"시트 "+name+" 문제 "+no+": 해설이 누락되었습니다.");
+   required(get(row,"성경범위"),"시트 "+name+" 문제 "+no+": 성경범위가 누락되었습니다.");
+   const existingDbUuid=dateNamed?clean(row[header.indexOf("기존 DB 문제 UUID (개발실)")])||null:null;
    questions.push({
-    no,question_type:type as "MCQ"|"OX",prompt:get(row,"문제"),choices,
+    no,existingDbUuid,question_type:type as "MCQ"|"OX",prompt:get(row,"문제"),choices,
     correct_index,explanation:get(row,"간단설명"),
     hint:normalizeValue(get(row,"힌트")) as string|null,
     bible_range:normalizeValue(get(row,"성경범위")) as string|null,
@@ -177,6 +180,8 @@ export async function makePreservePlan(bytes:Buffer){
   for(const next of w.questions){
    const q=dbByNo.get(next.no);
    required(q,w.sheet+" → "+quiz.title+": 후보 번호 "+next.no+"를 찾지 못했습니다.");
+   if(next.existingDbUuid)required(next.existingDbUuid.toLowerCase()===q!.id.toLowerCase(),
+    w.sheet+" → "+quiz.title+" 문제 "+next.no+": 엑셀 DB UUID가 기존 실제 문제 ID와 다릅니다.");
    required(q!.question_type===next.question_type,
     w.sheet+" → "+quiz.title+" 문제 "+next.no+": 문제유형이 달라 자동 ID 매칭을 차단했습니다.");
    const baseline=questionBaseline(q!);
