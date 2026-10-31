@@ -69,6 +69,7 @@ begin
   select * into strict qr from public.quizzes where id=v_quiz_id;
   baseline:=wk->'baseline';
   if qr.status::text<>'SCHEDULED'
+    or qr.open_at is null or qr.close_at is null
     or qr.open_at<=clock_timestamp()
     or qr.quiz_type::text<>'WEEKLY'
     or qr.selection_mode::text<>'FIXED'
