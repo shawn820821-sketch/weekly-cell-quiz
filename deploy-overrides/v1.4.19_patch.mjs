@@ -28,3 +28,6 @@ fs.appendFileSync("src/app/globals.css","\n.importSafeSummary{padding:13px;margi
  fs.writeFileSync(path,s);
 }
 console.log("v1.4.19 staged safe preserve import preview, guarded legacy replace, disabled atomic apply");
+
+// Offline regression gate: all records mocked; no Production DB read/write.
+await import("./v1.4.19_synthetic_test.mjs");
