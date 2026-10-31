@@ -22,7 +22,7 @@ fs.appendFileSync("src/app/globals.css","\n.importSafeSummary{padding:13px;margi
  const path="src/app/api/admin/import/commit/route.ts";
  let s=fs.readFileSync(path,"utf8");
  const anchor=/if\s*\(\s*body\.mode\s*===\s*["']REPLACE["']\s*\)\s*\{/;
- if(!anchor.test(s))throw new Error("LEGACY_REPLACE_GUARD_ANCHOR_MISSING");
+ if(!anchor.test(s)){const i=s.indexOf("REPLACE");throw new Error("LEGACY_REPLACE_GUARD_ANCHOR_MISSING excerpt="+s.slice(Math.max(0,i-230),i+580));}
  const guard="\n  // A legacy replacement must never delete a scheduled or selected quiz.\n  if(body.replaceImportId){\n   const linked=await supabaseRest<Array<{quiz_id:string;selected:boolean}>>(\n    \"questions?import_id=eq.\"+body.replaceImportId+\"&select=quiz_id,selected\");\n   const ids=[...new Set(linked.map(q=>q.quiz_id))];\n   if(ids.length){\n    const targets=await supabaseRest<Array<{id:string;status:string;open_at:string|null}>>(\n     \"quizzes?id=in.(\"+ids.join(\",\")+\")&select=id,status,open_at\");\n    const sessions=await supabaseRest<Array<{id:string}>>(\"quiz_sessions?quiz_id=in.(\"+ids.join(\",\")+\")&limit=1&select=id\");\n    const submissions=await supabaseRest<Array<{id:string}>>(\"submissions?quiz_id=in.(\"+ids.join(\",\")+\")&limit=1&select=id\");\n    if(targets.some(q=>q.status===\"SCHEDULED\"||q.status===\"OPEN\"||q.status===\"CLOSED\")\n       ||linked.some(q=>q.selected)||sessions.length||submissions.length)\n     return NextResponse.json({error:\"기존 예약·선택·응시 기록이 있는 파일은 삭제형 교체가 금지됩니다. 상단 예약 유지형 Excel 업데이트를 사용하세요.\"},{status:409});\n   }\n  }\n";
  s=s.replace(anchor,(matched)=>matched+guard);
  fs.writeFileSync(path,s);
