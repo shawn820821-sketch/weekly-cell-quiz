@@ -48,7 +48,7 @@ const corrupted=(sheet,cell,value)=>{
  book.Sheets[sheet][cell]=old;
  return blocked;
 };
-assert(corrupted(dates[0],"U6","Y"),"11 recommended rows must fail");pass++;
+assert(corrupted(dates[0],"U8","Y"),"11 recommended rows must fail");pass++;
 assert(corrupted(dates[1],"A6","WQ-WRONG-Q001"),"invalid stable key must fail");pass++;
 assert(corrupted(dates[2],"B2","2026-11-24 00:00"),"wrong publish date must fail");pass++;
 assert(corrupted(dates[3],"B1","2026년 11월 4주차"),"other inconsistent title must fail");pass++;
