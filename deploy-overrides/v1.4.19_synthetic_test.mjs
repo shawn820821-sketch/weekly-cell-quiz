@@ -88,7 +88,7 @@ try{
  const v3book=XLSX.utils.book_new();
  for(let wi=0;wi<4;wi++){
   const date=openDays[wi];
-  const close=new Date(Date.parse(date+"T00:00:00+09:00")+5*86400000).toISOString().slice(0,10);
+  const close=new Date(Date.parse(date+"T00:00:00Z")+5*86400000).toISOString().slice(0,10);
   const cy=wi===3?"2026년 12월 1주차":"2026년 11월 "+(wi+2)+"주차";
   const rows=[
     ["실제 퀴즈 제목",cy],["퀴즈 공개일",date+" 00:00"],
