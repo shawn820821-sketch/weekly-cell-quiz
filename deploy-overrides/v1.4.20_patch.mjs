@@ -53,3 +53,6 @@ await import("./v1.4.20_synthetic_test.mjs");
   fs.writeFileSync(file,s);
  }
 }
+
+// v1.4.21: keep original Excel import layout; validate v4 and accepted Supabase statuses.
+await import("./v1.4.21_fix.mjs");
