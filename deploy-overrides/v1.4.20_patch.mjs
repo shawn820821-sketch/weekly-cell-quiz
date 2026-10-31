@@ -25,3 +25,5 @@ fs.writeFileSync("src/app/api/admin/import/recommended-commit/route.ts","import 
 }
 fs.appendFileSync("src/app/globals.css","\n.importRecommended{margin:15px 0 20px;padding:18px}\n.importRecommendedResult{border-top:1px solid #d8dfd2;margin-top:14px;padding-top:13px}\n.importRecommendedRow{padding:10px 0;border-bottom:1px solid #dde2d8;display:flex;flex-direction:column;gap:4px}\n.importRecommendedRow small{font-size:12px;overflow-wrap:anywhere}\n.importRecommendedCollision{padding:13px 0}\n.importRecommendedCollision button{margin:5px 8px 5px 0}\n");
 console.log("v1.4.20: Excel v4 Y-selected auto-schedule UI and isolated endpoints installed");
+
+await import("./v1.4.20_synthetic_test.mjs");
