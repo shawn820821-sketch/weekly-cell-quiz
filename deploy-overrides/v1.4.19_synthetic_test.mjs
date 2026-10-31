@@ -79,6 +79,58 @@ try{
  XLSX.utils.book_append_sheet(wrong,XLSX.utils.aoa_to_sheet(broken),"2주차");
  blocked=false;try{parsePreserveExcel(XLSX.write(wrong,{type:"buffer",bookType:"xlsx"}))}catch(e){blocked=String(e).includes("힌트");}
  assert(blocked,"missing hint header blocks update");pass++;
+
+ // Publication-date v3 sheets with stable business keys and original candidate numbers.
+ questionRows[0].candidate_order=1;
+ const v3header=["고정 문항키(비UUID)","기존 DB 문제 UUID (개발실)","원본 시트","원본 문항번호",
+ "변경 구분","문제유형","문제","보기1","보기2","보기3","보기4","정답",
+ "해설","힌트","성경범위","난이도","비고","변경 필드","v1 원본행","v2 수정행"];
+ const v3book=XLSX.utils.book_new();
+ for(let wi=0;wi<4;wi++){
+  const date=openDays[wi];
+  const close=new Date(Date.parse(date+"T00:00:00+09:00")+5*86400000).toISOString().slice(0,10);
+  const cy=wi===3?"2026년 12월 1주차":"2026년 11월 "+(wi+2)+"주차";
+  const rows=[
+    ["실제 퀴즈 제목",cy],["퀴즈 공개일",date+" 00:00"],
+    ["퀴즈 마감일",close+" 23:59"],["말씀 복습 기간",reading[wi]],v3header
+  ];
+  for(let no=1;no<=15;no++)rows.push([
+    "WQ-"+date.replace(/-/g,"")+"-Q"+String(no).padStart(3,"0"),"",
+    (wi+2)+"주차",no,"내용수정","MCQ","수정 문제 "+no,
+    "새 보기 A","새 보기 B","새 보기 C","새 보기 D","B",
+    "수정 해설",no===1?"비누설 힌트":"","아모스 1:1",no===1?"HARD":"MEDIUM","수정","문제, 보기, 해설",14,14
+  ]);
+  XLSX.utils.book_append_sheet(v3book,XLSX.utils.aoa_to_sheet(rows),date);
+ }
+ const v3bytes=XLSX.write(v3book,{type:"buffer",bookType:"xlsx"});
+ const v3parsed=parsePreserveExcel(v3bytes);
+ assert(v3parsed.weeks.length===4&&v3parsed.weeks.every(w=>w.questions.length===15),
+  "new YYYY-MM-DD sheet format reads all 60 candidates");pass++;
+ assert(v3parsed.weeks[3].declaredMonthKey==="2026-12"&&v3parsed.weeks[3].declaredWeekIndex===1,
+  "November 30 is actually December week 1");pass++;
+ const v3plan=await makePreservePlan(v3bytes);
+ assert(v3plan.weeks.length===4&&v3plan.changedQuestions===60&&v3plan.weeks.every(w=>w.unchangedSelectionIds.length===10),
+  "new v3 rows map to original UUIDs and selected questions");pass++;
+ assert(before===JSON.stringify({quizRows,questionRows}),
+  "date-named v3 preview is read only");pass++;
+ v3book.Sheets["2026-11-30"].B1.v="2026년 11월 5주차";
+ let v3blocked=false;
+ try{await makePreservePlan(XLSX.write(v3book,{type:"buffer",bookType:"xlsx"}))}
+ catch(e){v3blocked=String(e).includes("DB 출제 주차");}
+ assert(v3blocked,"incorrect November 5th week title blocked");pass++;
+ v3book.Sheets["2026-11-30"].B1.v="2026년 12월 1주차";
+ v3book.Sheets["2026-11-09"].A6.v="WQ-INVALID-Q001";
+ v3blocked=false;
+ try{parsePreserveExcel(XLSX.write(v3book,{type:"buffer",bookType:"xlsx"}))}
+ catch(e){v3blocked=String(e).includes("고유 코드");}
+ assert(v3blocked,"wrong stable business ID blocked");pass++;
+ v3book.Sheets["2026-11-09"].A6.v="WQ-20261109-Q001";
+ v3book.Sheets["2026-11-09"].B2.v="2026-11-10 00:00";
+ v3blocked=false;
+ try{parsePreserveExcel(XLSX.write(v3book,{type:"buffer",bookType:"xlsx"}))}
+ catch(e){v3blocked=String(e).includes("공개일시");}
+ assert(v3blocked,"inconsistent opening timestamp blocked");pass++;
+
  console.log("v1.4.19 safe preserve synthetic regression: "+pass+" checks PASS; zero external database requests");
 }finally{
  fs.unlinkSync(probePath);
