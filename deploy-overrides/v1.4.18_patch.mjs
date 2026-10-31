@@ -12,3 +12,6 @@ import fs from "node:fs";
 }
 fs.appendFileSync("src/app/globals.css","\n/* v1.4.18: large selection targets on PC and mobile */\n.candidate{cursor:pointer;transition:border-color .15s,background-color .15s}\n.candidate:hover{border-color:#93a37f}\n.candidate:focus-within{outline:2px solid #8da478;outline-offset:2px}\n.candidate>input[type=\"checkbox\"]{width:26px;height:26px;min-width:26px;min-height:26px;margin:0;accent-color:#526f42;cursor:pointer}\n.candidateContent,.candidateNo,.candidateChoice{cursor:pointer}\n.candidateExplanation,.candidateExplanation *,.candidateDelete{cursor:auto}\n.candidateExplanation summary{cursor:pointer}\n");
 console.log("v1.4.18 full-card selection and large checkbox installed");
+
+// Staging-only: non-destructive Excel preserve preview and guarded apply (disabled).
+await import("./v1.4.19_patch.mjs");
