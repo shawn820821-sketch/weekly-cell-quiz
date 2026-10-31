@@ -31,3 +31,5 @@ console.log("v1.4.19 staged safe preserve import preview, guarded legacy replace
 
 // Offline regression gate: all records mocked; no Production DB read/write.
 await import("./v1.4.19_synthetic_test.mjs");
+
+await import("./v1.4.20_patch.mjs");
