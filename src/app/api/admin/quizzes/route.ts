@@ -5,7 +5,7 @@ import { supabaseRest } from "@/lib/supabase/rest";
 export async function GET() {
   try {
     await requireAdmin();
-    const rows=await supabaseRest<any[]>("quizzes?order=created_at.desc&select=*");
+    const rows=await supabaseRest<any[]>("quizzes?order=open_at.asc.nullslast,created_at.asc&select=*");
     const now=Date.now();
     const quizzes=rows.map(q=>{
       if(q.quiz_type!=="WEEKLY"||q.status==="DRAFT"||!q.open_at||!q.close_at)return q;
