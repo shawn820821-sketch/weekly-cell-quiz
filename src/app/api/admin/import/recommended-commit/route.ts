@@ -7,6 +7,22 @@ import { inspectRecommendedConflicts } from "@/server/recommendedImportServer";
 export const runtime="nodejs";
 type CreatedQuiz={id:string;title:string;open_at:string};
 type RowQuestion={id:string;quiz_id:string;selected:boolean};
+type MonthPeriod={id:string;starts_on:string;ends_on:string;closed:boolean};
+function lastSunday(year:number,monthZeroBased:number){
+ const day=new Date(Date.UTC(year,monthZeroBased+1,0));
+ day.setUTCDate(day.getUTCDate()-day.getUTCDay());
+ return day.toISOString().slice(0,10);
+}
+function expectedMonthlyPeriod(openDate:string){
+ let year=Number(openDate.slice(0,4)),month=Number(openDate.slice(5,7))-1;
+ if(openDate>lastSunday(year,month)){
+  month++;
+  if(month===12){year++;month=0;}
+ }
+ const previousSunday=lastSunday(year,month-1);
+ const startsOn=new Date(Date.parse(previousSunday+"T00:00:00Z")+86400000).toISOString().slice(0,10);
+ return {name:String(year)+"년 "+String(month+1)+"월",starts_on:startsOn,ends_on:lastSunday(year,month)};
+}
 export async function POST(request:Request){
  let importId:string|null=null;
  let createdQuizIds:string[]=[];
@@ -25,6 +41,32 @@ export async function POST(request:Request){
   const conflicts=await inspectRecommendedConflicts(book.weeks);
   if(conflicts.length)
    return NextResponse.json({error:"기존 퀴즈와 공개일이 중복됩니다. 지정된 4개 주차를 먼저 삭제하고 미리보기를 다시 실행하세요.",conflicts},{status:409});
+
+  // Resolve the active season and monthly settlement period before creating quizzes.
+  // Each settlement period ends on its month's last Sunday (Korea-local dates).
+  const seasons=await supabaseRest<Array<{id:string}>>("seasons?active=eq.true&select=id");
+  if(seasons.length!==1)throw new Error("활성 시즌은 정확히 하나여야 합니다. 시즌 설정을 확인하세요.");
+  const seasonId=seasons[0].id;
+  const periods=await supabaseRest<MonthPeriod[]>(
+   "monthly_periods?season_id=eq."+seasonId+"&select=id,starts_on,ends_on,closed");
+  const periodByOpenDate=new Map<string,string>();
+  for(const week of book.weeks){
+   const covering=periods.filter(p=>p.starts_on<=week.openDate&&p.ends_on>=week.openDate);
+   if(covering.length>1)throw new Error("월간 정산 기간이 중복됩니다: "+week.openDate);
+   let period=covering[0];
+   if(!period){
+    const expected=expectedMonthlyPeriod(week.openDate);
+    if(periods.some(p=>p.starts_on<=expected.ends_on&&p.ends_on>=expected.starts_on))
+     throw new Error("월간 정산 기간이 겹칩니다: "+week.openDate);
+    const made=await supabaseRest<MonthPeriod[]>("monthly_periods?select=id,starts_on,ends_on,closed",
+     {method:"POST",body:JSON.stringify({season_id:seasonId,...expected,closed:false})});
+    period=made[0];
+    if(!period?.id)throw new Error("월간 정산 기간 생성에 실패했습니다: "+week.openDate);
+    periods.push(period);
+   }
+   if(period.closed)throw new Error("마감된 월간 정산 기간에는 예약할 수 없습니다: "+week.openDate);
+   periodByOpenDate.set(week.openDate,period.id);
+  }
 
   // No current data or reservations are deleted by this endpoint.
   // All writes create NEW records in DRAFT, then one final batch publishes SCHEDULED.
@@ -46,6 +88,7 @@ export async function POST(request:Request){
    life_date_range:w.lifeDateRange,bible_range:w.bibleRange,
    open_at:w.openAt,close_at:w.closeAt,content_month_key:w.monthKey,
    content_week_index:w.weekIndex,count_in_monthly:true,
+   season_id:seasonId,monthly_period_id:periodByOpenDate.get(w.openDate),
    created_by:admin.personId,import_id:importId
   }));
   const created=await supabaseRest<CreatedQuiz[]>(
